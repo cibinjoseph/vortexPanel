@@ -1,9 +1,11 @@
+#!/usr/bin/python3
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
 
-class panels:
+class Panels:
     # a panel object is used to keep track of parameters associated with each panel
     def __init__(self, coords):
         self.xcoords = coords[0]
@@ -42,25 +44,25 @@ def split_into_panels(x, y, step, numPoints):
     for xcoord, ycoord in zip(x[smallPanel:firstThird][::smallPanel],
                               y[smallPanel:firstThird][::smallPanel]):
         panel_list.append(
-            panels(draw_panel(lastx, lasty, xcoord, ycoord, step)))
+            Panels(draw_panel(lastx, lasty, xcoord, ycoord, step)))
         lastx = xcoord
         lasty = ycoord
     for xcoord, ycoord in zip(x[firstThird:secondThird][::largePanel],
                               y[firstThird:secondThird][::largePanel]):
         panel_list.append(
-            panels(draw_panel(lastx, lasty, xcoord, ycoord, step)))
+            Panels(draw_panel(lastx, lasty, xcoord, ycoord, step)))
         lastx = xcoord
         lasty = ycoord
     for xcoord, ycoord in zip(x[secondThird:numPoints][::smallPanel],
                               y[secondThird:numPoints][::smallPanel]):
         panel_list.append(
-            panels(draw_panel(lastx, lasty, xcoord, ycoord, step)))
+            Panels(draw_panel(lastx, lasty, xcoord, ycoord, step)))
         lastx = xcoord
         lasty = ycoord
 
 
 # account for the last two panels
-    panel_list.append(panels(draw_panel(lastx, lasty, x[-1], 0, step)))
+    panel_list.append(Panels(draw_panel(lastx, lasty, x[-1], 0, step)))
     return (panel_list)
 
 
@@ -170,14 +172,13 @@ listOfPanels = topPanels + botPanels
 
 freestream = 1
 alpha_range = [-15, 15]
-alpha_deg = np.linspace(alpha_range[0], alpha_range[1],
-                        alpha_range[-1] - alpha_range[0])
+alpha_deg = np.linspace(alpha_range[0], alpha_range[1], 3)
 alpha = alpha_deg * np.pi / 180
 cl = np.empty(len(alpha))
 lastPanelIndex = len(topPanels) - 1
 JMatrix = findJMatrix(listOfPanels, lastPanelIndex)
-for i, a in enumerate(alpha):
-    cl[i] = findLift(listOfPanels, freestream, a, lastPanelIndex, c, JMatrix)
+for i, alf in enumerate(alpha):
+    cl[i] = findLift(listOfPanels, freestream, alf, lastPanelIndex, c, JMatrix)
 
 fig1
 plt.plot(xu, yu, 'g')
