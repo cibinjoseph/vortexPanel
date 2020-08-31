@@ -135,7 +135,6 @@ m = (airfoil // 1000) / 100 * 1.0
 p = ((airfoil // 100) % 10) / 10 * 1.0
 t = airfoil % 100 / 100 * 1.0
 
-# numPoints = 5000
 numPoints = 7000
 x = np.linspace(0, c, numPoints)
 
@@ -171,14 +170,23 @@ topPanels = split_into_panels(xu, yu, c / numPoints, numPoints)
 listOfPanels = topPanels + botPanels
 
 freestream = 1
-alpha_range = [-15, 15]
-alpha_deg = np.linspace(alpha_range[0], alpha_range[1], 3)
+alpha_max = 15
+alpha_deg = np.linspace(-alpha_max, alpha_max, 2)
 alpha = alpha_deg * np.pi / 180
 cl = np.empty(len(alpha))
 lastPanelIndex = len(topPanels) - 1
 JMatrix = findJMatrix(listOfPanels, lastPanelIndex)
 for i, alf in enumerate(alpha):
     cl[i] = findLift(listOfPanels, freestream, alf, lastPanelIndex, c, JMatrix)
+
+cl0 = findLift(listOfPanels, freestream, 0.0, lastPanelIndex, c, JMatrix)
+cla = (cl[0]-cl0)/(alpha[0])
+alpha0 = -cl0/cla
+
+print('NACA ' + str(airfoil))
+print('CL0           = ' + str(cl0))
+print('CLa (deg-1 ; rad-1) = ' + str(cla*np.pi/180) + ' ; ' + str(cla))
+print('al0 (deg   ; rad  ) = ' + str(alpha0) + ' ; ' + str(alpha0*np.pi/180))
 
 fig1
 plt.plot(xu, yu, 'g')
@@ -191,7 +199,7 @@ plt.title('NACA ' + str(airfoil) + ' Airfoil')
 plt.grid()
 plt.xlabel("x/c")
 plt.ylabel("t/c")
-plt.savefig('./Plots/airfoil.png', dpi=300)
+# plt.savefig('./Plots/airfoil.png', dpi=300)
 
 fig2 = plt.figure()
 plt.grid()
@@ -199,7 +207,8 @@ plt.plot(alpha_deg, cl, '-r')
 plt.title('NACA ' + str(airfoil) + ' Airfoil Cl vs Angle of Attack')
 plt.xlabel('Angle of Attack (\u00b0)')
 plt.ylabel('Cl')
-plt.xlim(alpha_range)
+plt.xlim([-alpha_max, alpha_max])
+
 
 airfoil_data = pd.read_csv('./XfoilData/xfoil_data_50000.csv', sep=',')
 airfoil_angle = airfoil_data.values[:, 0]
@@ -220,6 +229,6 @@ plt.legend([
     'Panel Method', 'Xfoil Re = 50,000', 'Xfoil Re = 100,000',
     'Xfoil Re = 500,000'
 ])
-plt.savefig('./Plots/cl_result.png', dpi=300)
+# plt.savefig('./Plots/cl_result.png', dpi=300)
 
 plt.show()
