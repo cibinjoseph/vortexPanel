@@ -34,7 +34,7 @@ def draw_panel(x1, y1, x2, y2, step):
     return (xcoord, ycoord)
 
 
-def split_into_panels(x, y, step, numPoints):
+def split_into_panels(x, y, step, numPoints, smallPanel, largePanel):
     firstThird = int(0.33 * numPoints)
     secondThird = int(0.66 * numPoints)
     panel_list = []
@@ -126,109 +126,115 @@ def findLift(listOfPanels, freestream, alpha, lastPanelIndex, c, JMatrix):
 
     return (lift)
 
-
+def simulate(MPXX='1234', numPoints=7000, showPlots=False):
 # Required inputs, airfoil number and chord length
-airfoil = 4418
-c = 1
+    c = 1
 
-m = (airfoil // 1000) / 100 * 1.0
-p = ((airfoil // 100) % 10) / 10 * 1.0
-t = airfoil % 100 / 100 * 1.0
+    m = int(MPXX[0])/100
+    p = int(MPXX[1])/10
+    t = int(MPXX[2:4])/100
 
-numPoints = 7000
-x = np.linspace(0, c, numPoints)
+    x = np.linspace(0, c, numPoints)
 
-smallPanel = 25
-largePanel = 50
+    smallPanel = 25
+    largePanel = 50
 
-yt = 5 * t * (0.2969 * np.sqrt(x / c) - 0.126 * (x / c) - 0.3516 *
-              (x / c)**2 + 0.2843 * (x / c)**3 - 0.1015 * (x / c)**4)
+    if t > 0.0:
+        yt = 5 * t * (0.2969 * np.sqrt(x / c) - 0.126 * (x / c) - 0.3516 *
+                      (x / c)**2 + 0.2843 * (x / c)**3 - 0.1015 * (x / c)**4)
+    else:
+        yt = np.zeros(numPoints)
 
-yc = np.piecewise(x, [x <= p * c, x > p * c], [
-    lambda x: m / p**2 * (2 * p * (x / c) - (x / c)**2), lambda x: m /
-    (1 - p)**2 * ((1 - 2 * p) + 2 * p * (x / c) - (x / c)**2)
-])
+    yc = np.piecewise(x, [x <= p * c, x > p * c], [
+        lambda x: m / p**2 * (2 * p * (x / c) - (x / c)**2), lambda x: m /
+        (1 - p)**2 * ((1 - 2 * p) + 2 * p * (x / c) - (x / c)**2)
+    ])
 
-dyc = np.piecewise(x, [x <= p * c, x > p * c], [
-    lambda x: 2 * m / p**2 * (p - (x / c)), lambda x: 2 * m / (1 - p)**2 *
-    (p - (x / c))
-])
+    dyc = np.piecewise(x, [x <= p * c, x > p * c], [
+        lambda x: 2 * m / p**2 * (p - (x / c)), lambda x: 2 * m / (1 - p)**2 *
+        (p - (x / c))
+    ])
 
-theta = np.arctan(dyc)
+    theta = np.arctan(dyc)
 
-xu = x - yt * np.sin(theta)
-xl = x + yt * np.sin(theta)
+    xu = x - yt * np.sin(theta)
+    xl = x + yt * np.sin(theta)
 
-yu = yc + yt * np.cos(theta)
-yl = yc - yt * np.cos(theta)
+    yu = yc + yt * np.cos(theta)
+    yl = yc - yt * np.cos(theta)
 
-fig1 = plt.figure()
-botPanels = split_into_panels(xl, yl, c / numPoints, numPoints)
-for panel in botPanels:
-    panel.flipCoords()
-topPanels = split_into_panels(xu, yu, c / numPoints, numPoints)
-listOfPanels = topPanels + botPanels
+    fig1 = plt.figure()
+    botPanels = split_into_panels(xl, yl, c / numPoints, numPoints, \
+                                  smallPanel, largePanel)
+    for panel in botPanels:
+        panel.flipCoords()
+    topPanels = split_into_panels(xu, yu, c / numPoints, numPoints, \
+                                  smallPanel, largePanel)
+    listOfPanels = topPanels + botPanels
 
-freestream = 1
-alpha_max = 15
-alpha_deg = np.linspace(-alpha_max, alpha_max, 2)
-alpha = alpha_deg * np.pi / 180
-cl = np.empty(len(alpha))
-lastPanelIndex = len(topPanels) - 1
-JMatrix = findJMatrix(listOfPanels, lastPanelIndex)
-for i, alf in enumerate(alpha):
-    cl[i] = findLift(listOfPanels, freestream, alf, lastPanelIndex, c, JMatrix)
+    freestream = 1
+    alpha_max = 15
+    alpha_deg = np.linspace(-alpha_max, alpha_max, 2)
+    alpha = alpha_deg * np.pi / 180
+    cl = np.empty(len(alpha))
+    lastPanelIndex = len(topPanels) - 1
+    JMatrix = findJMatrix(listOfPanels, lastPanelIndex)
+    for i, alf in enumerate(alpha):
+        cl[i] = findLift(listOfPanels, freestream, alf, lastPanelIndex, c, JMatrix)
 
-cl0 = findLift(listOfPanels, freestream, 0.0, lastPanelIndex, c, JMatrix)
-cla = (cl[0]-cl0)/(alpha[0])
-alpha0 = -cl0/cla
+    cl0 = findLift(listOfPanels, freestream, 0.0, lastPanelIndex, c, JMatrix)
+    cla = (cl[0]-cl0)/(alpha[0])
+    alpha0 = -cl0/cla
 
-print('NACA ' + str(airfoil))
-print('CL0           = ' + str(cl0))
-print('CLa (deg-1 ; rad-1) = ' + str(cla*np.pi/180) + ' ; ' + str(cla))
-print('al0 (deg   ; rad  ) = ' + str(alpha0) + ' ; ' + str(alpha0*np.pi/180))
+    print('NACA ' + MPXX)
+    print('CL0           = ' + str(cl0))
+    print('CLa (deg-1 ; rad-1) = ' + str(cla*np.pi/180) + ' ; ' + str(cla))
+    print('al0 (deg   ; rad  ) = ' + str(alpha0*180/np.pi) + ' ; ' + str(alpha0))
 
-fig1
-plt.plot(xu, yu, 'g')
-plt.plot(xl, yl, 'g')
+    fig1
+    plt.plot(xu, yu, 'g')
+    plt.plot(xl, yl, 'g')
 # for panel in listOfPanels:
 # plt.plot(panel.controlPoint[0], panel.controlPoint[1], '.k')
-plt.xlim(-0.1, c + 0.1)
-plt.ylim(-c / 1.5, c / 1.5)
-plt.title('NACA ' + str(airfoil) + ' Airfoil')
-plt.grid()
-plt.xlabel("x/c")
-plt.ylabel("t/c")
+    plt.xlim(-0.1, c + 0.1)
+    plt.ylim(-c / 1.5, c / 1.5)
+    plt.title('NACA ' + MPXX + ' Airfoil')
+    plt.grid()
+    plt.xlabel("x/c")
+    plt.ylabel("t/c")
 # plt.savefig('./Plots/airfoil.png', dpi=300)
 
-fig2 = plt.figure()
-plt.grid()
-plt.plot(alpha_deg, cl, '-r')
-plt.title('NACA ' + str(airfoil) + ' Airfoil Cl vs Angle of Attack')
-plt.xlabel('Angle of Attack (\u00b0)')
-plt.ylabel('Cl')
-plt.xlim([-alpha_max, alpha_max])
+    fig2 = plt.figure()
+    plt.grid()
+    plt.plot(alpha_deg, cl, '-r')
+    plt.title('NACA ' + MPXX + ' Airfoil Cl vs Angle of Attack')
+    plt.xlabel('Angle of Attack (\u00b0)')
+    plt.ylabel('Cl')
+    plt.xlim([-alpha_max, alpha_max])
 
 
-airfoil_data = pd.read_csv('./XfoilData/xfoil_data_50000.csv', sep=',')
-airfoil_angle = airfoil_data.values[:, 0]
-airfoil_cl = airfoil_data.values[:, 1]
-plt.plot(airfoil_angle, airfoil_cl, linewidth=1)
+    airfoil_data = pd.read_csv('./XfoilData/xfoil_data_50000.csv', sep=',')
+    airfoil_angle = airfoil_data.values[:, 0]
+    airfoil_cl = airfoil_data.values[:, 1]
+    plt.plot(airfoil_angle, airfoil_cl, linewidth=1)
 
-airfoil_data = pd.read_csv('./XfoilData/xfoil_data_100000.csv', sep=',')
-airfoil_angle = airfoil_data.values[:, 0]
-airfoil_cl = airfoil_data.values[:, 1]
-plt.plot(airfoil_angle, airfoil_cl, linewidth=1)
+    airfoil_data = pd.read_csv('./XfoilData/xfoil_data_100000.csv', sep=',')
+    airfoil_angle = airfoil_data.values[:, 0]
+    airfoil_cl = airfoil_data.values[:, 1]
+    plt.plot(airfoil_angle, airfoil_cl, linewidth=1)
 
-airfoil_data = pd.read_csv('./XfoilData/xfoil_data_500000.csv', sep=',')
-airfoil_angle = airfoil_data.values[:, 0]
-airfoil_cl = airfoil_data.values[:, 1]
-plt.plot(airfoil_angle, airfoil_cl, linewidth=1)
-plt.xlim(-20, 20)
-plt.legend([
-    'Panel Method', 'Xfoil Re = 50,000', 'Xfoil Re = 100,000',
-    'Xfoil Re = 500,000'
-])
+    airfoil_data = pd.read_csv('./XfoilData/xfoil_data_500000.csv', sep=',')
+    airfoil_angle = airfoil_data.values[:, 0]
+    airfoil_cl = airfoil_data.values[:, 1]
+    plt.plot(airfoil_angle, airfoil_cl, linewidth=1)
+    plt.xlim(-20, 20)
+    plt.legend([
+        'Panel Method', 'Xfoil Re = 50,000', 'Xfoil Re = 100,000',
+        'Xfoil Re = 500,000'
+    ])
 # plt.savefig('./Plots/cl_result.png', dpi=300)
 
-plt.show()
+# plt.show()
+
+if __name__ == '__main__':
+    simulate(MPXX='5605')
